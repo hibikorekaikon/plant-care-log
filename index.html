@@ -176,6 +176,7 @@ textarea{min-height:76px;resize:vertical}
       <button class="secondary menu-button" id="menuBtn" aria-label="メニュー" aria-haspopup="true" aria-expanded="false">⋯</button>
       <div class="menu-panel" id="dataMenu" role="menu" hidden>
         <button id="batchWaterBtn" role="menuitem">まとめて水やり</button>
+        <button id="batchShortcutBtn" role="menuitem">まとめて水やりURLをコピー</button>
         <div class="menu-separator" role="separator"></div>
         <button id="exportBtn" role="menuitem">バックアップを保存</button>
         <button id="importBtn" role="menuitem">バックアップから復元</button>
@@ -1186,6 +1187,16 @@ $('importFile').onchange=async()=>{
 };
 
 $('batchWaterBtn').onclick=openBatchWatering;
+$('batchShortcutBtn').onclick=async()=>{
+  closeDataMenu();
+  const url=location.origin + location.pathname + '?water=batch';
+  try{
+    await navigator.clipboard.writeText(url);
+    toast('まとめて水やりURLをコピーしました');
+  }catch(e){
+    prompt('このURLをコピーしてください',url);
+  }
+};
 
 function autoRecordFromUrl(){
   const params=new URLSearchParams(location.search);
