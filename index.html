@@ -68,6 +68,16 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .check-row{display:flex;align-items:center;gap:8px;margin-top:10px;color:var(--text);font-size:14px}
 .check-row input{width:auto}
 .photo-preview{display:none;width:100%;max-height:240px;object-fit:contain;margin-top:10px;border-radius:12px;background:#f9fafb}
+.plant-photo-preview{display:none;width:100%;max-height:220px;object-fit:contain;margin-top:10px;border-radius:12px;background:#f9fafb}
+.optional-section{border:1px solid var(--line);border-radius:12px;margin-top:12px;background:#fff}
+.optional-section summary{padding:12px 13px;font-weight:750;font-size:14px;cursor:pointer;list-style:none}
+.optional-section summary::-webkit-details-marker{display:none}
+.optional-section summary::after{content:'＋';float:right;color:var(--muted)}
+.optional-section[open] summary::after{content:'−'}
+.optional-section-body{padding:0 13px 13px;border-top:1px solid var(--line)}
+.conditional-fields[hidden]{display:none}
+.field-help{font-size:11px;color:var(--muted);margin-top:5px}
+.record-meta{font-size:11px;color:var(--muted);margin-top:12px;text-align:center}
 .history-photo{display:block;width:100%;max-height:320px;object-fit:contain;margin-top:9px;border-radius:12px;background:#f9fafb}
 .hint{font-size:12px;color:var(--muted);margin-top:5px}
 .calendar-panel{background:var(--card);border-radius:16px;padding:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
@@ -104,10 +114,10 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .badge{background:var(--soft);color:#1d4ed8;padding:5px 8px;border-radius:999px;font-size:12px;font-weight:700}
 dialog{
   width:min(92vw,520px);border:0;border-radius:18px;padding:0;
-  box-shadow:0 20px 60px rgba(0,0,0,.25)
+  box-shadow:0 20px 60px rgba(0,0,0,.25);max-height:calc(100dvh - 24px);overflow:hidden
 }
 dialog::backdrop{background:rgba(0,0,0,.35)}
-.modal{padding:18px}
+.modal{padding:18px;max-height:calc(100dvh - 24px);overflow:auto}
 .modal h2{margin:0 0 14px;font-size:20px}
 label{font-size:13px;color:var(--muted);display:block;margin:10px 0 6px}
 input,select,textarea{
@@ -205,20 +215,76 @@ textarea{min-height:76px;resize:vertical}
 
 <dialog id="plantDialog">
   <div class="modal">
-    <h2>植物を追加</h2>
-    <label>植物名</label>
+    <h2 id="plantDialogTitle">植物を追加</h2>
+    <label>管理名 <span aria-hidden="true">*</span></label>
     <input id="plantName" placeholder="例：パキポディウム ①">
-    <label>区分</label>
+    <label>種類・品種（任意）</label>
+    <input id="plantType" placeholder="例：Pachypodium densicaule">
+    <label>生育区分</label>
     <select id="plantStage">
       <option>成株</option>
       <option>実生</option>
       <option>播種</option>
     </select>
-    <label>種類（任意）</label>
-    <input id="plantType" placeholder="例：Pachypodium densicaule">
+
+    <details class="optional-section" id="acquisitionSection">
+      <summary>入手情報（任意）</summary>
+      <div class="optional-section-body">
+        <label>入手日</label>
+        <input id="plantAcquiredDate" type="date">
+        <label>入手方法</label>
+        <select id="plantAcquisitionMethod">
+          <option value="">未設定</option>
+          <option>購入</option>
+          <option>譲渡</option>
+          <option>自家実生</option>
+          <option>採取</option>
+          <option>その他</option>
+        </select>
+        <label>入手先</label>
+        <input id="plantSource" placeholder="例：店舗名、販売者名">
+        <div id="purchasePriceFields" class="conditional-fields" hidden>
+          <label>購入価格（任意）</label>
+          <input id="plantPrice" type="number" min="0" inputmode="numeric" placeholder="例：7000">
+        </div>
+        <label>由来</label>
+        <select id="plantOrigin">
+          <option value="">未設定</option>
+          <option>国内実生</option>
+          <option>輸入実生</option>
+          <option>輸入株</option>
+          <option>現地球</option>
+          <option>自家実生</option>
+          <option>不明</option>
+          <option>その他</option>
+        </select>
+      </div>
+    </details>
+
+    <details class="optional-section" id="cultivationSection">
+      <summary>栽培情報・メモ（任意）</summary>
+      <div class="optional-section-body">
+        <div id="seedDateFields" class="conditional-fields" hidden>
+          <label>播種日</label>
+          <input id="plantSowingDate" type="date">
+          <label>発芽日</label>
+          <input id="plantGerminationDate" type="date">
+        </div>
+        <label>管理場所</label>
+        <input id="plantLocation" placeholder="例：屋外棚 上段、室内窓辺">
+        <label>メモ</label>
+        <textarea id="plantMemo" placeholder="特徴や入手時の状態など"></textarea>
+        <label>登録時の写真</label>
+        <input id="plantPhoto" type="file" accept="image/*">
+        <div class="field-help">写真は端末内に保存され、バックアップにも含まれます。</div>
+        <img id="plantPhotoPreview" class="plant-photo-preview" alt="登録写真のプレビュー">
+        <button class="danger" id="removePlantPhoto" type="button" style="display:none;margin-top:8px;padding:8px 10px;font-size:12px">写真を削除</button>
+      </div>
+    </details>
+    <div class="record-meta" id="plantRecordMeta" hidden></div>
     <div class="actions">
       <button class="secondary" id="cancelPlant">キャンセル</button>
-      <button id="savePlant">追加</button>
+      <button id="savePlant">登録する</button>
     </div>
   </div>
 </dialog>
@@ -432,6 +498,8 @@ function render(){
               aria-label="${esc(p.name)}のメニュー" aria-haspopup="true" aria-expanded="false"
               onclick="togglePlantMenu('${p.id}',event)">⋯</button>
             <div class="menu-panel" id="plantMenu-${p.id}" role="menu" hidden>
+              <button role="menuitem" onclick="closePlantMenus();openPlantEditor('${p.id}')">株情報を編集</button>
+              <div class="menu-separator" role="separator"></div>
               <button role="menuitem" onclick="closePlantMenus();showHistory('${p.id}')">履歴を見る</button>
               <button role="menuitem" onclick="closePlantMenus();copyShortcutUrl('${p.id}')">水やりショートカットURL</button>
               <button class="menu-danger" role="menuitem" onclick="closePlantMenus();removePlant('${p.id}')">この株を削除</button>
@@ -448,25 +516,143 @@ function render(){
   if(!$('calendarView').classList.contains('hidden')) renderCalendar();
 }
 
-$('addBtn').onclick=()=>{
-  $('plantName').value='';
+let editingPlantId=null;
+let editingPlantPhoto='';
+
+const PLANT_FIELD_IDS=[
+  'plantName','plantType','plantAcquiredDate','plantSource','plantPrice',
+  'plantSowingDate','plantGerminationDate','plantLocation','plantMemo'
+];
+
+function togglePlantConditionalFields(){
+  $('purchasePriceFields').hidden=$('plantAcquisitionMethod').value!=='購入';
+  $('seedDateFields').hidden=!['実生','播種'].includes($('plantStage').value);
+}
+
+function setPlantPhotoPreview(photo){
+  editingPlantPhoto=photo || '';
+  $('plantPhotoPreview').src=editingPlantPhoto;
+  $('plantPhotoPreview').style.display=editingPlantPhoto?'block':'none';
+  $('removePlantPhoto').style.display=editingPlantPhoto?'inline-block':'none';
+}
+
+function resetPlantForm(){
+  PLANT_FIELD_IDS.forEach(id=>$(id).value='');
   $('plantStage').value='成株';
-  $('plantType').value='';
+  $('plantAcquisitionMethod').value='';
+  $('plantOrigin').value='';
+  $('plantPhoto').value='';
+  $('acquisitionSection').open=false;
+  $('cultivationSection').open=false;
+  $('plantRecordMeta').hidden=true;
+  setPlantPhotoPreview('');
+  togglePlantConditionalFields();
+}
+
+function openNewPlant(){
+  editingPlantId=null;
+  resetPlantForm();
+  $('plantDialogTitle').textContent='植物を追加';
+  $('savePlant').textContent='登録する';
   $('plantDialog').showModal();
+}
+
+window.openPlantEditor=id=>{
+  const p=data.plants.find(x=>String(x.id)===String(id));
+  if(!p) return;
+  editingPlantId=p.id;
+  resetPlantForm();
+  $('plantDialogTitle').textContent='株情報を編集';
+  $('savePlant').textContent='変更を保存';
+  $('plantName').value=p.name || '';
+  $('plantType').value=p.type || '';
+  $('plantStage').value=p.stage || '成株';
+  $('plantAcquiredDate').value=p.acquiredDate || '';
+  $('plantAcquisitionMethod').value=p.acquisitionMethod || '';
+  $('plantSource').value=p.source || '';
+  $('plantPrice').value=p.price ?? '';
+  $('plantOrigin').value=p.origin || '';
+  $('plantSowingDate').value=p.sowingDate || '';
+  $('plantGerminationDate').value=p.germinationDate || '';
+  $('plantLocation').value=p.location || '';
+  $('plantMemo').value=p.memo || '';
+  setPlantPhotoPreview(p.photo || '');
+  $('acquisitionSection').open=Boolean(p.acquiredDate || p.acquisitionMethod || p.source || p.price || p.origin);
+  $('cultivationSection').open=Boolean(p.sowingDate || p.germinationDate || p.location || p.memo || p.photo);
+  if(p.createdAt){
+    $('plantRecordMeta').hidden=false;
+    $('plantRecordMeta').textContent=`登録：${fmtDate(p.createdAt)}${p.updatedAt?`　更新：${fmtDate(p.updatedAt)}`:''}`;
+  }
+  togglePlantConditionalFields();
+  $('plantDialog').showModal();
+};
+
+$('addBtn').onclick=openNewPlant;
+$('plantStage').onchange=togglePlantConditionalFields;
+$('plantAcquisitionMethod').onchange=togglePlantConditionalFields;
+$('plantPhoto').onchange=async()=>{
+  const file=$('plantPhoto').files[0];
+  if(!file) return;
+  try{
+    setPlantPhotoPreview(await compressImage(file));
+  }catch(e){
+    alert(e.message);
+    $('plantPhoto').value='';
+  }
+};
+$('removePlantPhoto').onclick=()=>{
+  $('plantPhoto').value='';
+  setPlantPhotoPreview('');
 };
 $('cancelPlant').onclick=()=> $('plantDialog').close();
 $('savePlant').onclick=()=>{
   const name=$('plantName').value.trim();
-  if(!name) return alert('植物名を入力してください');
-  data.plants.push({
-    id:crypto.randomUUID(),
+  if(!name) return alert('管理名を入力してください');
+  const now=Date.now();
+  const details={
     name,
     stage:$('plantStage').value,
     type:$('plantType').value.trim(),
-    logs:[]
-  });
-  $('plantDialog').close();
-  save();
+    acquiredDate:$('plantAcquiredDate').value,
+    acquisitionMethod:$('plantAcquisitionMethod').value,
+    source:$('plantSource').value.trim(),
+    price:$('plantAcquisitionMethod').value==='購入' && $('plantPrice').value!==''?Number($('plantPrice').value):'',
+    origin:$('plantOrigin').value,
+    sowingDate:['実生','播種'].includes($('plantStage').value)?$('plantSowingDate').value:'',
+    germinationDate:['実生','播種'].includes($('plantStage').value)?$('plantGerminationDate').value:'',
+    location:$('plantLocation').value.trim(),
+    memo:$('plantMemo').value.trim(),
+    photo:editingPlantPhoto,
+    updatedAt:now
+  };
+  if(editingPlantId!==null){
+    const p=data.plants.find(x=>String(x.id)===String(editingPlantId));
+    if(!p) return alert('編集する株が見つかりませんでした');
+    const previous={...p};
+    Object.assign(p,details);
+    if(save()){
+      $('plantDialog').close();
+      toast('株情報を更新しました');
+    }else{
+      Object.assign(p,previous);
+      render();
+    }
+  }else{
+    const newPlant={
+      id:crypto.randomUUID(),
+      ...details,
+      createdAt:now,
+      logs:[]
+    };
+    data.plants.push(newPlant);
+    if(save()){
+      $('plantDialog').close();
+      toast('植物を登録しました');
+    }else{
+      data.plants=data.plants.filter(p=>p!==newPlant);
+      render();
+    }
+  }
 };
 
 const CARE_FIELD_IDS={
