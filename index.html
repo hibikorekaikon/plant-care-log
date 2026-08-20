@@ -124,6 +124,12 @@ input,select,textarea{
   width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;
   font:inherit;background:#fff
 }
+input[type="date"]{
+  display:block;width:100%;min-width:0;max-width:100%;
+  inline-size:100%;min-inline-size:0;max-inline-size:100%;
+  height:48px;min-height:48px;line-height:1.2
+}
+input[type="date"]::-webkit-date-and-time-value{min-height:1.2em;text-align:left}
 textarea{min-height:76px;resize:vertical}
 .actions{display:flex;gap:8px;margin-top:14px}
 .actions button{flex:1}
