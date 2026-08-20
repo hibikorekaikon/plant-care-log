@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#111827" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="水やり記録" />
+  <title>パキポディウム 水やり記録</title>
+  <style>
+    :root{
+      --bg:#f3f4f6; --card:#ffffff; --text:#111827; --muted:#6b7280;
+      --line:#e5e7eb; --accent:#2563eb; --danger:#dc2626; --soft:#eff6ff;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      background:var(--bg); color:var(--text);
+      padding:calc(16px + env(safe-area-inset-top)) 14px calc(28px + env(safe-area-inset-bottom));
+    }
+    .wrap{max-width:680px;margin:0 auto}
+    h1{font-size:24px;margin:4px 0 4px}
+    .sub{color:var(--muted);font-size:13px;margin-bottom:16px}
+    .toolbar{display:flex;gap:8px;margin-bottom:14px}
+    button{
+      border:0;border-radius:12px;padding:12px 14px;font-size:15px;font-weight:700;
+      background:#111827;color:#fff;cursor:pointer;
+    }
+    button.secondary{background:#fff;color:#111827;border:1px solid var(--line)}
+    button.danger{background:#fff;color:var(--danger);border:1px solid #fecaca}
+    .card{
+      background:var(--card);border-radius:16px;padding:15px;margin-bottom:12px;
+      box-shadow:0 1px 3px rgba(0,0,0,.06);
+    }
+    .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .name{font-size:18px;font-weight:800}
+    .meta{font-size:13px;color:var(--muted);margin-top:4px}
+    .elapsed{font-size:27px;font-weight:900;margin:12px 0 4px}
+    .elapsed span{font-size:13px;color:var(--muted);font-weight:600}
+    .water{
+      width:100%;background:var(--accent);font-size:17px;padding:14px;margin-top:10px;
+    }
+    .mini{display:flex;gap:8px;margin-top:8px}
+    .mini button{flex:1;padding:10px;font-size:13px}
+    .empty{text-align:center;color:var(--muted);padding:24px 10px}
+    dialog{
+      width:min(92vw,520px);border:0;border-radius:18px;padding:0;
+      box-shadow:0 20px 60px rgba(0,0,0,.25)
+    }
+    dialog::backdrop{background:rgba(0,0,0,.35)}
+    .modal{padding:18px}
+    .modal h2{margin:0 0 14px;font-size:20px}
+    label{font-size:13px;color:var(--muted);display:block;margin:10px 0 6px}
+    input,select,textarea{
+      width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;
+      font:inherit;background:#fff;
+    }
+    textarea{min-height:76px;resize:vertical}
+    .actions{display:flex;gap:8px;margin-top:14px}
+    .actions button{flex:1}
+    .history-item{padding:10px 0;border-bottom:1px solid var(--line)}
+    .history-item:last-child{border-bottom:0}
+    .history-title{font-weight:700}
+    .history-note{font-size:13px;color:var(--muted);margin-top:3px}
+    .badge{background:var(--soft);color:#1d4ed8;padding:5px 8px;border-radius:999px;font-size:12px;font-weight:700}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🌵 パキポディウム 水やり記録</h1>
+  <div class="sub">記録はこのブラウザ内に保存されます。</div>
+
+  <div class="toolbar">
+    <button id="addBtn">＋ 株を追加</button>
+    <button class="secondary" id="exportBtn">バックアップ</button>
+  </div>
+
+  <div id="plants"></div>
+</div>
+
+<dialog id="plantDialog">
+  <div class="modal">
+    <h2>株を追加</h2>
+    <label>株名</label>
+    <input id="plantName" placeholder="例：恵比寿大黒 ①" />
+    <label>区分</label>
+    <select id="plantStage">
+      <option>成株</option>
+      <option>実生</option>
+      <option>播種</option>
+    </select>
+    <label>種類（任意）</label>
+    <input id="plantType" placeholder="例：Pachypodium densicaule" />
+    <div class="actions">
+      <button class="secondary" id="cancelPlant">キャンセル</button>
+      <button id="savePlant">追加</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="waterDialog">
+  <div class="modal">
+    <h2 id="waterTitle">水やり記録</h2>
+    <label>水やり方法</label>
+    <select id="waterType">
+      <option>たっぷり灌水</option>
+      <option>通常</option>
+      <option>軽く水やり</option>
+      <option>霧吹き</option>
+    </select>
+    <label>液肥</label>
+    <select id="fertilizer">
+      <option>なし</option>
+      <option>あり</option>
+    </select>
+    <label>メモ（任意）</label>
+    <textarea id="waterNote" placeholder="例：朝に灌水、葉の状態良好"></textarea>
+    <div class="actions">
+      <button class="secondary" id="cancelWater">キャンセル</button>
+      <button id="saveWater">💧 記録する</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="historyDialog">
+  <div class="modal">
+    <h2 id="historyTitle">履歴</h2>
+    <div id="historyList"></div>
+    <div class="actions"><button id="closeHistory">閉じる</button></div>
+  </div>
+</dialog>
+
+<script>
+const KEY='pachypodium-water-log-v1';
+let data = JSON.parse(localStorage.getItem(KEY) || '{"plants":[]}');
+let currentId=null;
+
+const $=id=>document.getElementById(id);
+function save(){ localStorage.setItem(KEY, JSON.stringify(data)); render(); }
+function esc(s=''){ return s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function fmtDate(ts){
+  if(!ts) return '記録なし';
+  const d=new Date(ts);
+  return new Intl.DateTimeFormat('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(d);
+}
+function elapsed(ts){
+  if(!ts) return {main:'未記録', sub:'最初の水やりを記録してください'};
+  const diff=Date.now()-ts;
+  const days=Math.floor(diff/86400000);
+  const hours=Math.floor(diff/3600000);
+  if(days>=1) return {main:`${days}日`,sub:'前回の水やりから'};
+  return {main:`${hours}時間`,sub:'前回の水やりから'};
+}
+function render(){
+  const root=$('plants');
+  if(!data.plants.length){root.innerHTML='<div class="card empty">まだ株がありません。<br>「＋ 株を追加」から登録してください。</div>';return;}
+  root.innerHTML=data.plants.map(p=>{
+    const last=p.logs?.[0];
+    const e=elapsed(last?.time);
+    return `<div class="card">
+      <div class="row">
+        <div>
+          <div class="name">${esc(p.name)}</div>
+          <div class="meta">${esc(p.stage || '成株')}${p.type?` ・ ${esc(p.type)}`:''}</div>
+        </div>
+        <span class="badge">${p.logs?.length||0}回</span>
+      </div>
+      <div class="elapsed">${e.main} <span>${e.sub}</span></div>
+      <div class="meta">前回：${fmtDate(last?.time)}</div>
+      <button class="water" onclick="openWater('${p.id}')">💧 水やりした</button>
+      <div class="mini">
+        <button class="secondary" onclick="showHistory('${p.id}')">履歴</button>
+        <button class="danger" onclick="removePlant('${p.id}')">削除</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+$('addBtn').onclick=()=>{ $('plantName').value=''; $('plantStage').value='成株'; $('plantType').value=''; $('plantDialog').showModal(); };
+$('cancelPlant').onclick=()=> $('plantDialog').close();
+$('savePlant').onclick=()=>{
+  const name=$('plantName').value.trim();
+  if(!name) return alert('株名を入力してください');
+  data.plants.push({
+    id:crypto.randomUUID(),
+    name,
+    stage:$('plantStage').value,
+    type:$('plantType').value.trim(),
+    logs:[]
+  });
+  $('plantDialog').close(); save();
+};
+
+window.openWater=id=>{
+  currentId=id;
+  const p=data.plants.find(x=>x.id===id);
+  $('waterTitle').textContent=`${p.name} の水やり`;
+  $('waterType').value='たっぷり灌水';
+  $('fertilizer').value='なし';
+  $('waterNote').value='';
+  $('waterDialog').showModal();
+};
+$('cancelWater').onclick=()=> $('waterDialog').close();
+$('saveWater').onclick=()=>{
+  const p=data.plants.find(x=>x.id===currentId);
+  p.logs.unshift({
+    time:Date.now(),
+    type:$('waterType').value,
+    fertilizer:$('fertilizer').value,
+    note:$('waterNote').value.trim()
+  });
+  $('waterDialog').close(); save();
+};
+
+window.showHistory=id=>{
+  const p=data.plants.find(x=>x.id===id);
+  $('historyTitle').textContent=`${p.name} の履歴`;
+  $('historyList').innerHTML=(p.logs?.length?p.logs.map((l,i)=>`
+    <div class="history-item">
+      <div class="history-title">${fmtDate(l.time)} ・ ${esc(l.type)}</div>
+      <div class="history-note">液肥：${esc(l.fertilizer)}${l.note?` ／ ${esc(l.note)}`:''}</div>
+      <button class="danger" style="margin-top:7px;padding:7px 10px;font-size:12px" onclick="removeLog('${id}',${i})">この記録を削除</button>
+    </div>`).join(''):'<div class="empty">履歴はまだありません。</div>');
+  $('historyDialog').showModal();
+};
+$('closeHistory').onclick=()=> $('historyDialog').close();
+
+window.removePlant=id=>{
+  const p=data.plants.find(x=>x.id===id);
+  if(confirm(`「${p.name}」を削除しますか？\n水やり履歴も削除されます。`)){
+    data.plants=data.plants.filter(x=>x.id!==id); save();
+  }
+};
+window.removeLog=(id,index)=>{
+  if(!confirm('この水やり記録を削除しますか？')) return;
+  const p=data.plants.find(x=>x.id===id);
+  p.logs.splice(index,1); save(); showHistory(id);
+};
+
+$('exportBtn').onclick=()=>{
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='pachypodium-water-log-backup.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+
+render();
+</script>
+</body>
+</html>
