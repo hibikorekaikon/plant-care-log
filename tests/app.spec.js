@@ -25,7 +25,7 @@ test('主要画面がJavaScriptエラーなく表示される', async ({ page })
   page.on('pageerror', error => errors.push(error.message));
   await page.goto('/');
   await expect(page).toHaveTitle('塊根植物記録');
-  await expect(page.locator('#appVersionDisplay')).toHaveText('v1.8.1');
+  await expect(page.locator('#appVersionDisplay')).toHaveText('v1.9.0');
   await expect(page.locator('#addBtn')).toBeVisible();
   await expect(page.locator('#plantSearch')).toBeVisible();
   await expect(page.locator('#calendarViewBtn')).toBeVisible();
@@ -57,13 +57,13 @@ test('更新案内は新バージョンの初回だけ表示しメニューか�
   await seed(page);
   await page.goto('/');
   await expect(page.locator('#releaseNotice')).toBeVisible();
-  await expect(page.locator('#releaseNotice')).toContainText('v1.8.1 更新');
-  await expect(page.locator('#releaseNotice')).toContainText('主要操作を画面上部へ集約');
+  await expect(page.locator('#releaseNotice')).toContainText('v1.9.0 更新');
+  await expect(page.locator('#releaseNotice')).toContainText('カレンダー編集と表示テーマを追加');
 
   await page.locator('#releaseNoticeDetails').click();
   await expect(page.locator('#releaseNotesDialog')).toBeVisible();
-  await expect(page.locator('#releaseNotesList')).toContainText('v1.8.1');
-  await expect(page.locator('#releaseNotesList')).not.toContainText('v1.8.0');
+  await expect(page.locator('#releaseNotesList')).toContainText('v1.9.0');
+  await expect(page.locator('#releaseNotesList')).not.toContainText('v1.8.1');
   await expect(page.locator('#releaseNotesHint')).toContainText('今回のアップデート内容');
   await page.locator('#closeReleaseNotes').click();
 
@@ -73,6 +73,7 @@ test('更新案内は新バージョンの初回だけ表示しメニューか�
   await page.locator('#menuBtn').click();
   await page.locator('#releaseNotesBtn').click();
   await expect(page.locator('#releaseNotesDialog')).toBeVisible();
+  await expect(page.locator('#releaseNotesList')).toContainText('v1.9.0');
   await expect(page.locator('#releaseNotesList')).toContainText('v1.8.1');
   await expect(page.locator('#releaseNotesList')).toContainText('v1.8.0');
   await expect(page.locator('#releaseNotesList')).toContainText('v1.7.0');
@@ -311,7 +312,7 @@ test('バックアップに件数とバージョン情報を含めて保存す�
   expect(payload).toMatchObject({
     format: 'plant-care-log-backup',
     schemaVersion: 1,
-    appVersion: '1.8.1'
+    appVersion: '1.9.0'
   });
   expect(payload.plants).toHaveLength(3);
   expect(payload.reminders).toEqual([reminder]);
@@ -453,6 +454,122 @@ test('既存のケア履歴を日時と内容ごと編集する', async ({ page 
   const saved = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), storageKey);
   expect(saved.plants[0].logs).toHaveLength(1);
   expect(saved.plants[0].logs[0].time).toBe(new Date('2026-08-18T07:15').getTime());
+});
+
+test('カレンダーからケア済み記録を編集・削除できる', async ({ page }) => {
+  const log = {
+    time: new Date('2026-08-25T08:00').getTime(),
+    care: '水やり',
+    type: '通常',
+    fertilizer: 'なし',
+    details: { waterAmount: '100ml' },
+    note: '編集前'
+  };
+  await seed(page, [{ ...plants[0], logs: [log] }]);
+  await page.goto('/');
+  await page.locator('#calendarViewBtn').click();
+  await page.evaluate(() => window.selectCalendarDate('2026-08-25'));
+
+  const entry=page.locator('.calendar-care-entry');
+  await expect(entry).toContainText('グラキリス・水やり');
+  await entry.locator('.calendar-entry-edit').click();
+  await expect(page.locator('#careTitle')).toContainText('ケア記録を編集');
+  await page.locator('#waterAmount').fill('250ml');
+  await page.locator('#waterNote').fill('カレンダーから修正');
+  await page.locator('#saveCare').click();
+
+  await expect(page.locator('#careDialog')).toBeHidden();
+  await expect(page.locator('#historyDialog')).toBeHidden();
+  await expect(page.locator('.calendar-care-entry')).toContainText('250ml');
+  await expect(page.locator('.calendar-care-entry')).toContainText('カレンダーから修正');
+
+  page.once('dialog', dialog => dialog.accept());
+  await page.locator('.calendar-care-entry .calendar-entry-delete').click();
+  await expect(page.locator('.calendar-care-entry')).toHaveCount(0);
+  const saved = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), storageKey);
+  expect(saved.plants[0].logs).toHaveLength(0);
+});
+
+test('カレンダーからケア予定を編集・削除できる', async ({ page }) => {
+  const plan = {
+    id: 'calendar-plan',
+    startAt: new Date('2099-01-15T09:00').getTime(),
+    care: '施肥',
+    type: '施肥',
+    fertilizer: 'なし',
+    details: { name: 'ハイポネックス', form: '液肥', amount: '2000倍' },
+    note: '編集前',
+    recurrence: { unit: 'none', interval: 1 }
+  };
+  await seed(page, [{ ...plants[0], plans: [plan], logs: [] }]);
+  await page.goto('/');
+  await page.locator('#calendarViewBtn').click();
+  await page.evaluate(() => window.selectCalendarDate('2099-01-15'));
+
+  const entry=page.locator('.calendar-plan-entry');
+  await expect(entry).toContainText('グラキリス・施肥予定');
+  await entry.locator('.calendar-entry-edit').click();
+  await expect(page.locator('#careTitle')).toContainText('ケア予定を編集');
+  await page.locator('#waterNote').fill('カレンダーから予定を修正');
+  await page.locator('#saveCare').click();
+
+  await expect(page.locator('#careDialog')).toBeHidden();
+  await expect(page.locator('#plansDialog')).toBeHidden();
+  await expect(page.locator('.calendar-plan-entry')).toContainText('カレンダーから予定を修正');
+
+  page.once('dialog', dialog => dialog.accept());
+  await page.locator('.calendar-plan-entry .calendar-entry-delete').click();
+  await expect(page.locator('.calendar-plan-entry')).toHaveCount(0);
+  const saved = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), storageKey);
+  expect(saved.plants[0].plans).toHaveLength(0);
+});
+
+test('端末設定に合わせてダークモードへ切り替わる', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await seed(page, [plants[0]]);
+  await page.goto('/');
+
+  await expect.poll(() => page.locator('body').evaluate(element => getComputedStyle(element).backgroundColor)).toBe('rgb(15, 23, 42)');
+  await expect(page.locator('.plant-card')).toHaveCSS('background-color', 'rgb(17, 24, 39)');
+  await expect(page.locator('body')).toHaveCSS('color', 'rgb(243, 244, 246)');
+
+  await page.locator('#addBtn').click();
+  await expect(page.locator('#plantDialog')).toHaveCSS('background-color', 'rgb(17, 24, 39)');
+  await expect(page.locator('#plantName')).toHaveCSS('background-color', 'rgb(17, 24, 39)');
+
+  await page.emulateMedia({ colorScheme: 'light' });
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(243, 244, 246)');
+});
+
+test('メニューで表示テーマを選択して保存できる', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await seed(page, [plants[0]]);
+  await page.goto('/');
+
+  await page.locator('#menuBtn').click();
+  await expect(page.locator('#themeSettingsBtn')).toHaveText('表示テーマ：自動');
+  await page.locator('#themeSettingsBtn').click();
+  await page.locator('#themeMode').selectOption('dark');
+  await page.locator('#saveTheme').click();
+
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(15, 23, 42)');
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('plant-care-theme-v1'))).toBe('dark');
+
+  await page.emulateMedia({ colorScheme: 'light' });
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await page.locator('#menuBtn').click();
+  await expect(page.locator('#themeSettingsBtn')).toHaveText('表示テーマ：ダーク');
+  await page.locator('#themeSettingsBtn').click();
+  await page.locator('#themeMode').selectOption('auto');
+  await page.locator('#saveTheme').click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 });
 
 test('まとめて水やりを過去日時で複数株へ記録する', async ({ page }) => {
